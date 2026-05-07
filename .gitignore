@@ -1,0 +1,16 @@
+# Backend
+bin/
+obj/
+
+# Frontend
+node_modules/
+dist/
+
+# Database
+*.db
+
+# Env
+.env
+
+# VSCode
+.vscode/

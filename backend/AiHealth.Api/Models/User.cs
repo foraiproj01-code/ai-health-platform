@@ -1,0 +1,2 @@
+namespace AiHealth.Api.Models;
+
