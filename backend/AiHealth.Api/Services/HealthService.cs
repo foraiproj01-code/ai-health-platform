@@ -55,6 +55,8 @@ public class HealthService
         return new
         {
             record.Id,
+            record.Height,
+            record.Weight,
             record.BMI,
             record.Category,
             record.Recommendation,
@@ -82,5 +84,119 @@ public class HealthService
             })
             .Select(x => x[0])
             .ToListAsync();
+    }
+
+    public async Task<object> GenerateAiRecommendationAsync(
+        int userId,
+        AiRecommendationRequest request
+    )
+    {
+        var user = await _context.Users.FindAsync(userId);
+
+        if (user == null)
+            throw new Exception("Колдонуучу табылган жок");
+
+        var latestRecord = await _context.HealthRecords
+            .Where(x => x.UserId == userId)
+            .OrderByDescending(x => x.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        var bmiText = latestRecord != null
+            ? $"Сиздин акыркы BMI көрсөткүчүңүз {latestRecord.BMI}, категорияңыз: {latestRecord.Category}."
+            : "Азырынча BMI тарыхы жок.";
+
+        var recommendation = $@"
+{bmiText}
+
+Максатыңыз: {request.Goal}
+Активдүүлүк деңгээли: {request.ActivityLevel}
+
+AI сунуш:
+1. Күн сайын 1.5–2 литр суу ичүүгө аракет кылыңыз.
+2. Тамактанууда жашылча, белок жана пайдалуу углеводдорду тең салмакта колдонуңуз.
+3. Аптасына кеминде 3 жолу жеңил физикалык активдүүлүк жасаңыз.
+4. Уйку режимиңизди сактаңыз: күнүнө 7–8 саат уктоо сунушталат.
+5. Өзүңүздү начар сезсеңиз, сөзсүз дарыгерге кайрылыңыз.
+
+Эскертүү: Бул медициналык диагноз эмес, маалыматтык сунуш.
+";
+
+        return new
+        {
+            user = $"{user.FirstName} {user.LastName}",
+            goal = request.Goal,
+            activityLevel = request.ActivityLevel,
+            recommendation
+        };
+    }
+
+    public async Task<object> GenerateNutritionPlanAsync(
+        int userId,
+        NutritionPlanRequest request
+    )
+    {
+        var user = await _context.Users.FindAsync(userId);
+
+        if (user == null)
+            throw new Exception("Колдонуучу табылган жок");
+
+        string breakfast;
+        string lunch;
+        string dinner;
+
+        if (request.Goal == "Арыктоо")
+        {
+            breakfast = "Сулу боткосу, кайнатылган жумуртка жана көк чай";
+            lunch = "Тоок эти, гречка жана жашылча салаты";
+            dinner = "Балык, брокколи жана жеңил салат";
+        }
+        else if (request.Goal == "Салмак кошуу")
+        {
+            breakfast = "Жумуртка, сыр, нан жана банан";
+            lunch = "Эт, күрүч жана жашылча салаты";
+            dinner = "Макарон, тоок эти жана айран";
+        }
+        else if (request.Goal == "Булчуң көбөйтүү")
+        {
+            breakfast = "Омлет, сулу боткосу жана сүт";
+            lunch = "Тоок эти, күрүч жана жашылча";
+            dinner = "Балык, картошка жана салат";
+        }
+        else
+        {
+            breakfast = "Йогурт, жемиш жана сулу";
+            lunch = "Шорпо, салат жана тоок эти";
+            dinner = "Жеңил белоктуу тамак жана жашылча";
+        }
+
+        var nutritionPlan = $@"
+Күнүмдүк калория: {request.DailyCalories}
+Тамак саны: {request.MealsPerDay}
+
+Эртең менен:
+{breakfast}
+
+Түшкү тамак:
+{lunch}
+
+Кечки тамак:
+{dinner}
+
+Кошумча сунуштар:
+1. Күнүнө 1.5–2 литр суу ичиңиз.
+2. Газдалган суусундуктарды жана ашыкча кантты азайтыңыз.
+3. Тамакты бир убакта жегенге аракет кылыңыз.
+4. Жашылча жана белокко бай азыктарды көбүрөөк колдонуңуз.
+5. Бул медициналык диета эмес, маалыматтык сунуш.
+";
+
+        return new
+        {
+            user = $"{user.FirstName} {user.LastName}",
+            goal = request.Goal,
+            dailyCalories = request.DailyCalories,
+            mealsPerDay = request.MealsPerDay,
+            nutritionPlan
+        };
     }
 }

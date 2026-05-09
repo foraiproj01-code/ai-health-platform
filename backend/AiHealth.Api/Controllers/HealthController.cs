@@ -26,7 +26,10 @@ public class HealthController : ControllerBase
         if (userId == null)
             return Unauthorized();
 
-        var result = await _healthService.CalculateAndSaveBmiAsync(int.Parse(userId), request);
+        var result = await _healthService.CalculateAndSaveBmiAsync(
+            int.Parse(userId),
+            request
+        );
 
         return Ok(result);
     }
@@ -40,6 +43,42 @@ public class HealthController : ControllerBase
             return Unauthorized();
 
         var result = await _healthService.GetHistoryAsync(int.Parse(userId));
+
+        return Ok(result);
+    }
+
+    [HttpPost("ai-recommendation")]
+    public async Task<IActionResult> GenerateAiRecommendation(
+        AiRecommendationRequest request
+    )
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (userId == null)
+            return Unauthorized();
+
+        var result = await _healthService.GenerateAiRecommendationAsync(
+            int.Parse(userId),
+            request
+        );
+
+        return Ok(result);
+    }
+
+    [HttpPost("nutrition-plan")]
+    public async Task<IActionResult> GenerateNutritionPlan(
+        NutritionPlanRequest request
+    )
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (userId == null)
+            return Unauthorized();
+
+        var result = await _healthService.GenerateNutritionPlanAsync(
+            int.Parse(userId),
+            request
+        );
 
         return Ok(result);
     }

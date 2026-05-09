@@ -1,16 +1,23 @@
-# Backend
+# backend
 bin/
 obj/
 
-# Frontend
+# frontend
 node_modules/
 dist/
+build/
 
-# Database
-*.db
-
-# Env
+# env
 .env
+.env.local
 
-# VSCode
+# vscode
 .vscode/
+
+# logs
+*.log
+
+# database
+*.db
+*.db-shm
+*.db-wal
