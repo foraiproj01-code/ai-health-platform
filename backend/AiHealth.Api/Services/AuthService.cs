@@ -13,12 +13,19 @@ public class AuthService
 {
     private readonly AppDbContext _context;
     private readonly IConfiguration _configuration;
+ 
+    private readonly EmailService _emailService;
 
-    public AuthService(AppDbContext context, IConfiguration configuration)
-    {
-        _context = context;
-        _configuration = configuration;
-    }
+   public AuthService(
+    AppDbContext context,
+    IConfiguration configuration,
+    EmailService emailService
+)
+{
+    _context = context;
+    _configuration = configuration;
+    _emailService = emailService;
+}
 
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
     {
@@ -42,6 +49,17 @@ public class AuthService
 
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
+         
+     await _emailService.SendEmailAsync(
+    user.Email,
+    "AI Health Platform - Катталуу ийгиликтүү болду",
+    $@"
+    <h2>Саламатсызбы, {user.FirstName}!</h2>
+    <p>Сиз AI Health Platform системасына ийгиликтүү катталдыңыз.</p>
+    <p>Эми аккаунтуңузга кирип, саламаттык анализин баштасаңыз болот.</p>
+    "
+);
+
 
         return new AuthResponse
         {
@@ -79,6 +97,58 @@ public class AuthService
         };
     }
 
+    public async Task<string> ForgotPasswordAsync(string email)
+    {
+        var user = await _context.Users
+            .FirstOrDefaultAsync(x => x.Email == email);
+
+        if (user == null)
+            throw new Exception("Колдонуучу табылган жок");
+
+        var token = Guid.NewGuid().ToString();
+
+        user.PasswordResetToken = token;
+        user.PasswordResetTokenExpiresAt = DateTime.UtcNow.AddHours(1);
+
+        await _context.SaveChangesAsync();
+         var frontendUrl = _configuration["EmailSettings:FrontendUrl"];
+var resetLink = $"{frontendUrl}/reset-password/{token}";
+
+await _emailService.SendEmailAsync(
+    user.Email,
+    "AI Health Platform - Паролду калыбына келтирүү",
+    $@"
+    <h2>Паролду калыбына келтирүү</h2>
+    <p>Паролуңузду өзгөртүү үчүн төмөнкү шилтемени басыңыз:</p>
+    <p>
+      <a href='{resetLink}'>Паролду өзгөртүү</a>
+    </p>
+    <p>Бул шилтеме 1 саат ичинде жарактуу.</p>
+    "
+  );
+   
+   
+    return "Паролду калыбына келтирүү шилтемеси email дарегиңизге жөнөтүлдү";
+    }
+
+    public async Task ResetPasswordAsync(string token, string newPassword)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(x =>
+            x.PasswordResetToken == token &&
+            x.PasswordResetTokenExpiresAt > DateTime.UtcNow
+        );
+
+        if (user == null)
+            throw new Exception("Токен жараксыз же мөөнөтү бүткөн");
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+
+        user.PasswordResetToken = null;
+        user.PasswordResetTokenExpiresAt = null;
+
+        await _context.SaveChangesAsync();
+    }
+
     private string GenerateJwtToken(User user)
     {
         var key = new SymmetricSecurityKey(
@@ -111,3 +181,5 @@ public class AuthService
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }
+
+

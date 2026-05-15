@@ -81,5 +81,42 @@ public class HealthController : ControllerBase
         );
 
         return Ok(result);
-    }
+    } 
+
+     [HttpPost("workout-plan")]
+public async Task<IActionResult> GenerateWorkoutPlan(
+    WorkoutPlanRequest request
+)
+{
+    var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+    if (userId == null)
+        return Unauthorized();
+
+    var result = await _healthService.GenerateWorkoutPlanAsync(
+        int.Parse(userId),
+        request
+    );
+
+    return Ok(result);
+}
+
+[HttpPost("ai-chat")]
+public async Task<IActionResult> GenerateAiChatResponse(
+    AiChatRequest request
+)
+{
+    var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+    if (userId == null)
+        return Unauthorized();
+
+    var result = await _healthService.GenerateAiChatResponseAsync(
+        int.Parse(userId),
+        request
+    );
+
+    return Ok(result);
+}
+
 }

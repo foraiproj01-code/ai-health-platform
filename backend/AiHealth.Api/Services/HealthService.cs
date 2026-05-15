@@ -199,4 +199,192 @@ AI сунуш:
             nutritionPlan
         };
     }
+
+    public async Task<object> GenerateWorkoutPlanAsync(
+        int userId,
+        WorkoutPlanRequest request
+    )
+    {
+        var user = await _context.Users.FindAsync(userId);
+
+        if (user == null)
+            throw new Exception("Колдонуучу табылган жок");
+
+        var latestRecord = await _context.HealthRecords
+            .Where(x => x.UserId == userId)
+            .OrderByDescending(x => x.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        var bmiText = latestRecord == null
+            ? "BMI маалыматы жок"
+            : $"Акыркы BMI: {latestRecord.BMI}, категория: {latestRecord.Category}";
+
+        var plan = new List<object>();
+
+        for (int day = 1; day <= request.DaysPerWeek; day++)
+        {
+            plan.Add(new
+            {
+                day = $"{day}-күн",
+                title = GetWorkoutTitle(request.Goal),
+                duration = GetWorkoutDuration(request.Level),
+                exercises = GetWorkoutExercises(request.Goal)
+            });
+        }
+
+        return new
+        {
+            user = $"{user.FirstName} {user.LastName}",
+            goal = request.Goal,
+            level = request.Level,
+            daysPerWeek = request.DaysPerWeek,
+            bmiInfo = bmiText,
+            recommendation = GetWorkoutRecommendation(request.Level),
+            plan
+        };
+    }
+
+    private string GetWorkoutTitle(string goal)
+    {
+        if (goal == "Арыктоо")
+            return "Май күйгүзүү машыгуусу";
+
+        if (goal == "Булчуң көбөйтүү")
+            return "Булчуң өстүрүү машыгуусу";
+
+        if (goal == "Чыдамкайлык")
+            return "Чыдамкайлык машыгуусу";
+
+        return "Жалпы ден соолук машыгуусу";
+    }
+
+    private string GetWorkoutDuration(string level)
+    {
+        if (level == "Башталгыч")
+            return "20-30 мүнөт";
+
+        if (level == "Орточо")
+            return "35-45 мүнөт";
+
+        if (level == "Жогорку")
+            return "50-60 мүнөт";
+
+        return "30 мүнөт";
+    }
+
+    private List<string> GetWorkoutExercises(string goal)
+    {
+        if (goal == "Арыктоо")
+        {
+            return new List<string>
+            {
+                "5 мүнөт жеңил чуркоо",
+                "Jumping jacks - 3 x 30 секунд",
+                "Squat - 3 x 12",
+                "Mountain climber - 3 x 20",
+                "Планка - 3 x 30 секунд",
+                "5 мүнөт созулуу"
+            };
+        }
+
+        if (goal == "Булчуң көбөйтүү")
+        {
+            return new List<string>
+            {
+                "Жеңил жылынуу - 5 мүнөт",
+                "Push-up - 4 x 10",
+                "Squat - 4 x 12",
+                "Lunge - 3 x 10",
+                "Plank - 3 x 45 секунд",
+                "Созулуу - 5 мүнөт"
+            };
+        }
+
+        if (goal == "Чыдамкайлык")
+        {
+            return new List<string>
+            {
+                "Жеңил чуркоо - 10 мүнөт",
+                "Burpees - 3 x 10",
+                "Jump rope - 3 x 1 мүнөт",
+                "Mountain climber - 3 x 25",
+                "Планка - 3 x 40 секунд",
+                "Дем алуу жана созулуу"
+            };
+        }
+
+        return new List<string>
+        {
+            "Жеңил жылынуу - 5 мүнөт",
+            "Жөө басуу - 15 мүнөт",
+            "Squat - 3 x 10",
+            "Push-up - 3 x 8",
+            "Планка - 3 x 20 секунд",
+            "Созулуу - 5 мүнөт"
+        };
+    }
+
+    private string GetWorkoutRecommendation(string level)
+    {
+        if (level == "Башталгыч")
+            return "Башында жеңил темп менен баштаңыз. Денени ашыкча кыйнабаңыз жана ар бир машыгуудан кийин эс алыңыз.";
+
+        if (level == "Орточо")
+            return "Орточо деңгээл үчүн машыгууларды туруктуу график менен аткарыңыз жана прогрессти көзөмөлдөңүз.";
+
+        if (level == "Жогорку")
+            return "Жогорку деңгээлде интенсивдүүлүктү туура бөлүштүрүп, калыбына келүүгө убакыт бериңиз.";
+
+        return "Машыгууну ден соолугуңузга жараша тандаңыз.";
+    }
+
+    public async Task<object> GenerateAiChatResponseAsync(
+    int userId,
+    AiChatRequest request
+)
+{
+    var user = await _context.Users.FindAsync(userId);
+
+    if (user == null)
+        throw new Exception("Колдонуучу табылган жок");
+
+    var latestRecord = await _context.HealthRecords
+        .Where(x => x.UserId == userId)
+        .OrderByDescending(x => x.CreatedAt)
+        .FirstOrDefaultAsync();
+
+    var bmiInfo = latestRecord == null
+        ? "BMI маалыматы жок"
+        : $"Акыркы BMI: {latestRecord.BMI}, категория: {latestRecord.Category}";
+
+    var answer = $@"
+Саламатсызбы, {user.FirstName}!
+
+Сиздин сурооңуз:
+{request.Message}
+
+Сиздин маалымат:
+{bmiInfo}
+Бою: {user.Height} см
+Салмак: {user.Weight} кг
+Жашы: {user.Age}
+
+AI жооп:
+1. Эгер максатыңыз арыктоо болсо, күнүмдүк калорияны азайтып, жеңил кардио кошуңуз.
+2. Эгер салмак кошуу болсо, белокко бай тамактарды көбөйтүңүз.
+3. Күнүнө 1.5–2 литр суу ичүү сунушталат.
+4. Аптасына 3–4 жолу физикалык активдүүлүк жасаңыз.
+5. Уйку режимиңизди сактаңыз: 7–8 саат уктоо маанилүү.
+
+Эскертүү: Бул медициналык диагноз эмес. Ден соолугуңуз боюнча олуттуу маселе болсо, дарыгерге кайрылыңыз.
+";
+
+    return new
+    {
+        user = $"{user.FirstName} {user.LastName}",
+        message = request.Message,
+        answer
+    };
+}
+
 }

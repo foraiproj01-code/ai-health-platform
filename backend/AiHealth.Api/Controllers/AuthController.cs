@@ -48,4 +48,50 @@ public class AuthController : ControllerBase
             });
         }
     }
+
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest request)
+    {
+        try
+        {
+            var token = await _authService.ForgotPasswordAsync(request.Email);
+
+            return Ok(new
+            {
+                message = "Паролду калыбына келтирүү токени түзүлдү",
+                resetToken = token
+            });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new
+            {
+                message = ex.Message
+            });
+        }
+    }
+
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword(ResetPasswordRequest request)
+    {
+        try
+        {
+            await _authService.ResetPasswordAsync(
+                request.Token,
+                request.NewPassword
+            );
+
+            return Ok(new
+            {
+                message = "Пароль ийгиликтүү өзгөртүлдү"
+            });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new
+            {
+                message = ex.Message
+            });
+        }
+    }
 }
